@@ -3,7 +3,7 @@ from database import get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete, Table
 from models.models import cities, trades, products, stores
-from typing import List
+from typing import List, Dict
 from schemas.schemas import City, Trade, Store, Product
 from pydantic import BaseModel
 
@@ -18,43 +18,46 @@ class CRUDableEntity:
         self.write_model = write_model
         self.target_table = target_table
 
-    async def get(self, target_id, session: AsyncSession):
+    async def get(self, target_id, session: AsyncSession) -> BaseModel:
         query = select(self.target_table).where(self.target_table.c.id == target_id)
         result = await session.execute(query)
         row = result.mappings().fetchone()
         if row:
             return self.read_model(**row)
     
-    async def get_all(self, session: AsyncSession):
+    async def get_all(self, session: AsyncSession) -> List[BaseModel]:
         query = select(self.target_table)
         result = await session.execute(query)
         return list(result.mappings())
     
-    async def post(self, new_entity: BaseModel, session: AsyncSession):
+    async def post(self, new_entity: BaseModel, session: AsyncSession) -> Dict:
         stmt = insert(self.target_table).values(**new_entity.model_dump())
         await session.execute(stmt)
         await session.commit()
         return {"status": "success"}
     
-    async def put(self, new_entity: BaseModel, session: AsyncSession):
-        stmt = update(self.target_table).where(self.target_table.c.id == new_entity.id).values(**new_entity.model_dump(exclude_unset=False)).execution_options(synchronize_session="fetch")
+    async def put(self, new_entity: BaseModel, session: AsyncSession, exclude_unset: bool = False) -> Dict:
+        stmt = update(self.target_table).where(self.target_table.c.id == new_entity.id).values(**new_entity.model_dump(exclude_unset=exclude_unset)).execution_options(synchronize_session="fetch")
         result = await session.execute(stmt)
         if result.rowcount == 0:
             raise HTTPException(status_code=404, detail={"message": "Объекта с таким id не существует"})
         await session.commit()
         return {"status": "success"}
     
-    async def delete(self, target_id: int, session: AsyncSession):
+    async def delete(self, target_id: int, session: AsyncSession) -> Dict:
         stmt = delete(self.target_table).where(self.target_table.c.id == target_id)
         result = await session.execute(stmt)
         await session.commit()
         return {"status": "success"}
     
-    async def patch(self, target_id: int, session: AsyncSession):
-        pass
+    async def patch(self, patched_entity: BaseModel, session: AsyncSession):
+        return await self.put(patched_entity, session, exclude_unset=True)
     
 
 trade = CRUDableEntity(Trade, None, trades)
+city = CRUDableEntity(City, None, cities)
+store = CRUDableEntity(Store, None, stores)
+product = CRUDableEntity(Product, None, products)
 
 
 router = APIRouter(
@@ -62,126 +65,93 @@ router = APIRouter(
     tags=["CRUD_operations"]
 )
 
-@router.get("/cities")
-async def get_city(session: AsyncSession = Depends(get_async_session)):
-    query = select(cities)
-    result = await session.execute(query)
-    return list(result.mappings())
+@router.get("/city", response_model=City)
+async def get_specific_city(city_id: int, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get(city_id, session)
+    return result
 
 
-@router.get("/city")
-async def get_specific_city(city_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(cities).where(cities.c.id == city_id)
-    result = await session.execute(query)
-    return result.mappings().fetchone()
+@router.get("/cities", response_model=List[City])
+async def get_cities(entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get_all(session)
+    return result
 
 
-# To-do: Добавить проверку на уникальность id, по-хорошему сделать уникальным так же и название города, и не добавлять id в запросе
-# т.к. он автоматически генерируется в бд
 @router.post("/city")
-async def add_city(new_city: City, session: AsyncSession = Depends(get_async_session)):
-    stmt = insert(cities).values(**new_city.model_dump())
-    await session.execute(stmt)
-    await session.commit()
-    return {"status": "success"}
-
+async def add_city(new_city: City, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.post(new_city, session)
+    return result
 
 @router.put("/city")
-async def replace_city(new_city: City, session: AsyncSession = Depends(get_async_session)):
-    stmt = update(cities).where(cities.c.id == new_city.id).values(**new_city.model_dump(exclude_unset=False)).execution_options(synchronize_session="fetch")
-    result = await session.execute(stmt)
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail={"message": "Города с таким id не существует"})
-    await session.commit()
-    return {"status": "success"}
-
+async def update_city(new_city: City, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.put(new_city, session)
+    return result
 
 @router.delete("/city")
-async def delete_city(deleted_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = delete(cities).where(cities.c.id == deleted_id)
-    result = await session.execute(stmt)
-    await session.commit()
-    return {"status": "success"}
+async def delete_city(city_id: int, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.delete(city_id, session)
+    return result
+
+@router.patch("/city")
+async def patch_city(patched_city: City, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.patch(patched_city, session)
+    return result
 
 
-@router.get("/products")
-async def get_product(session: AsyncSession = Depends(get_async_session)):
-    query = select(products)
-    result = await session.execute(query)
-    return list(result.mappings())
+@router.get("/product", response_model=Product)
+async def get_specific_product(product_id: int, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get(product_id, session)
+    return result
 
 
-@router.get("/product")
-async def get_specific_product(product_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(products).where(products.c.id == product_id)
-    result = await session.execute(query)
-    return result.mappings().fetchone()
+@router.get("/products", response_model=List[Product])
+async def get_products(entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get_all(session)
+    return result
 
 
 @router.post("/product")
-async def add_product(new_product: Product, session: AsyncSession = Depends(get_async_session)):
-    stmt = insert(products).values(**new_product.model_dump())
-    await session.execute(stmt)
-    await session.commit()
-    return {"result": "success"}
-
+async def add_product(new_product: Product, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.post(new_product, session)
+    return result
 
 @router.put("/product")
-async def update_product(new_product: Product, session: AsyncSession = Depends(get_async_session)):
-    stmt = update(products).where(products.c.id == new_product.id).values(**new_product.model_dump(exclude_unset=False)).execution_options(synchronize_session="fetch")
-    result = await session.execute(stmt)
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail={"message": "Товара с таким id не существует"})
-    await session.commit()
-    return {"status": "success"}
-
+async def update_product(new_product: Product, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.put(new_product, session)
+    return result
 
 @router.delete("/product")
-async def delete_product(deleted_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = delete(products).where(products.c.id == deleted_id)
-    await session.execute(stmt)
-    await session.commit()
-    return {"status": "success"}
+async def delete_product(product_id: int, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.delete(product_id, session)
+    return result
 
 
-@router.get("/stores")
-async def get_stores(session: AsyncSession = Depends(get_async_session)):
-    query = select(stores)
-    result = await session.execute(query)
-    return list(result.mappings())
+@router.get("/store", response_model=Store)
+async def get_specific_store(store_id: int, entity: CRUDableEntity = Depends(lambda: store), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get(store_id, session)
+    return result
 
 
-@router.get("/store")
-async def get_specific_store(store_id: int, session: AsyncSession = Depends(get_async_session)):
-    query = select(stores).where(stores.c.id == store_id)
-    result = await session.execute(query)
-    return result.mappings().fetchone()
+@router.get("/stores", response_model=List[Store])
+async def get_stores(entity: CRUDableEntity = Depends(lambda: store), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.get_all(session)
+    return result
 
 
 @router.post("/store")
-async def add_store(new_store: Store, session: AsyncSession = Depends(get_async_session)):
-    stmt = insert(products).values(**new_store.model_dump())
-    await session.execute(stmt)
-    await session.commit()
-    return {"result": "success"}
-
+async def add_trade(new_store: Store, entity: CRUDableEntity = Depends(lambda: store), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.post(new_store, session)
+    return result
 
 @router.put("/store")
-async def update_store(new_store: Store, session: AsyncSession = Depends(get_async_session)):
-    stmt = update(stores).where(stores.c.id == new_store.id).values(**new_store.model_dump(exclude_unset=False)).execution_options(synchronize_session="fetch")
-    result = await session.execute(stmt)
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail={"message": "Продукта с таким id не существует"})
-    await session.commit()
-    return {"status": "success"}
-
+async def update_store(new_store: Store, entity: CRUDableEntity = Depends(lambda: store), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.put(new_store, session)
+    return result
 
 @router.delete("/store")
-async def delete_store(store_id: int, session: AsyncSession = Depends(get_async_session)):
-    stmt = delete(stores).where(stores.c.id == store_id)
-    await session.execute(stmt)
-    await session.commit()
-    return {"status": "success"}
+async def delete_store(store_id: int, entity: CRUDableEntity = Depends(lambda: store), session: AsyncSession = Depends(get_async_session)):
+    result = await entity.delete(store_id, session)
+    return result
 
 
 @router.get("/trade", response_model=Trade)
