@@ -190,13 +190,16 @@ async def get_filtered_trades(filters: TradeFilter = Depends(), session: AsyncSe
     if filters.city_id is not None:
         conditions.append(stores.c.city_id == filters.city_id)
     if filters.product_id is not None:
-        conditions.append(trades.c.product_id == filters.product_id)
+        conditions.append(trades_products.c.product_id == filters.product_id)
     if filters.store_id is not None:
         conditions.append(trades.c.store_id == filters.store_id)
     if filters.last_n_days is not None:
         last_date = datetime.now() - timedelta(days=filters.last_n_days)
         conditions.append(trades.c.date >= last_date)
-    query = select(trades).select_from(join(trades, trades_products, trades.c.id == trades_products.c.trade_id)
+    query = select(trades,
+                   func.sum(products.c.price).label("total_price"),
+                    func.count(products.c.id).label("total_count"))\
+                        .select_from(join(trades, trades_products, trades.c.id == trades_products.c.trade_id)
                                        .join(products, products.c.id == trades_products.c.product_id)
                                        .join(stores, trades.c.store_id == stores.c.id)).where(
                                            and_(
