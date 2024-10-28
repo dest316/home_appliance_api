@@ -1,5 +1,3 @@
-from pydantic import BaseModel, constr
-from datetime import datetime
 from sqlalchemy import MetaData, Integer, String, TIMESTAMP, ForeignKey, Table, Column
 
 
