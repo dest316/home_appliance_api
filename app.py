@@ -5,6 +5,8 @@ from api.controllers.crud_product import router as crud_product_router
 from api.controllers.crud_store import router as crud_store_router
 from api.controllers.crud_trade import router as crud_trade_router
 from api.controllers.specific_trade import router as spec_trade_router
+from error_handlers import FKVError_handler
+from sqlalchemy.exc import IntegrityError
 
 
 app = FastAPI(
@@ -16,6 +18,8 @@ app.include_router(crud_product_router)
 app.include_router(crud_store_router)
 app.include_router(crud_trade_router)
 app.include_router(spec_trade_router)
+
+app.add_exception_handler(IntegrityError, FKVError_handler)
 
 
 @app.get('/')

@@ -8,7 +8,7 @@ class WriteTrade(BaseModel):
     date: datetime
 
 
-class Trade(BaseModel):
+class Trade(WriteTrade):
     id: int
     
 
