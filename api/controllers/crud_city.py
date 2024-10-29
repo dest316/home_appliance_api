@@ -27,7 +27,7 @@ async def get_cities(entity: CRUDableEntity = Depends(lambda: city), session: As
 
 
 @router.post("/")
-async def add_city(new_city: City, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
+async def add_city(new_city: WriteCity, entity: CRUDableEntity = Depends(lambda: city), session: AsyncSession = Depends(get_async_session)):
     result = await entity.post(new_city, session)
     return result
 

@@ -27,7 +27,7 @@ async def get_trade(entity: CRUDableEntity = Depends(lambda: trade), session: As
 
 
 @router.post("/")
-async def add_trade(new_trade: Trade, entity: CRUDableEntity = Depends(lambda: trade), session: AsyncSession = Depends(get_async_session)):
+async def add_trade(new_trade: WriteTrade, entity: CRUDableEntity = Depends(lambda: trade), session: AsyncSession = Depends(get_async_session)):
     result = await entity.post(new_trade, session)
     return result
 

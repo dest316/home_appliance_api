@@ -27,7 +27,7 @@ async def get_products(entity: CRUDableEntity = Depends(lambda: product), sessio
 
 
 @router.post("/")
-async def add_product(new_product: Product, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
+async def add_product(new_product: WriteProduct, entity: CRUDableEntity = Depends(lambda: product), session: AsyncSession = Depends(get_async_session)):
     result = await entity.post(new_product, session)
     return result
 
