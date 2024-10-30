@@ -9,19 +9,24 @@ from error_handlers import FKVError_handler
 from sqlalchemy.exc import IntegrityError
 
 
+# Точка входа в API
 app = FastAPI(
     title="API"
 )
 
+
+# Подключение роутеров с маршрутами для API
 app.include_router(crud_city_router)
 app.include_router(crud_product_router)
 app.include_router(crud_store_router)
 app.include_router(crud_trade_router)
 app.include_router(spec_trade_router)
 
+
+# Подключение обработчиков ошибок
 app.add_exception_handler(IntegrityError, FKVError_handler)
 
-
+# Главная страница приложения
 @app.get('/')
 def index():
     return Response("Hello world")

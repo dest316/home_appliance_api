@@ -5,7 +5,41 @@ from typing import List, Dict
 from fastapi import HTTPException
 
 
+
 class CRUDableEntity:
+    """
+    Класс для упрощения создания CRUD-операций для сущностей.
+
+    Предоставляет асинхронные реализации базовых CRUD-операций, таких как получение ресурса по id, получение списка из всех ресурсов,
+    полное обновление информации о ресурсе (кроме primary key, то есть id), создание нового ресурса и удаление ресурса по id.
+    Класс следует использовать, когда логика реализации CRUD-операций для сущности не требует редактирования других таблиц базы данных, кроме целевой.
+    Ресурс может реализовывать не все CRUD-операции через этот класс, допускается использование класса для создания части эндпоинтов.
+
+    Атрибуты:
+    ----------
+    read_model : BaseModel
+        **depricated** Используйте валидацию через модель pydantic на уровне эндпоинта
+    write_model : BaseModel
+        **depricated** Используйте валидацию через модель pydantic на уровне эндпоинта
+    target_table : Table
+        Целевая таблица, в которой хранятся данные об объекте
+
+    Методы:
+    -------
+    get(target_id: int, session: AsyncSession) -> BaseModel:
+        Возвращает объект из базы данных с id равным target_id, взаимодействуя с БД через асинхронную сессию session.
+    get_all(session: AsyncSession) -> List[BaseModel]: 
+        Возвращает список объектов из базы данных через асинхронную сессию session.
+    post(new_entity: BaseModel, session: AsyncSession) -> Dict:
+        Создает в базе данных новый объект new_entity, взаимодействуя с БД через асинхронную сессию session. В случае успеха возвращает
+        словарь вида {status: success}
+    put(new_entity: BaseModel, session: AsyncSession) -> BaseModel:
+        Заменяет объект с id, указанным в поле "id" модели new_entity на объект new_entity, взаимодействуя с БД через асинхронную сессию session.
+        В случае успеха возвращает словарь вида {status: success}. В случае, если объекта с target_id нет в БД, возвращает ошибку 404.
+    delete(target_id: int, session: AsyncSession) -> BaseModel:
+        Удаляет объект из базы данных с id равным target_id, взаимодействуя с БД через асинхронную сессию session.
+        В случае успеха возвращает словарь вида {status: success}. В случае, если объекта с target_id нет в БД, возвращает ошибку 404.
+    """
     read_model: BaseModel
     write_model: BaseModel
     target_table: Table
