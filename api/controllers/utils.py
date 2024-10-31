@@ -1,9 +1,9 @@
 from pydantic import BaseModel
 from sqlalchemy import Table, select, insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from fastapi import HTTPException
-
+from collections import Counter
 
 
 class CRUDableEntity:
@@ -18,7 +18,7 @@ class CRUDableEntity:
     Атрибуты:
     ----------
     read_model : BaseModel
-        **depricated** Используйте валидацию через модель pydantic на уровне эндпоинта
+        Используется для возврата результата в виде модели pydantic в методах get и get_all
     write_model : BaseModel
         **depricated** Используйте валидацию через модель pydantic на уровне эндпоинта
     target_table : Table
@@ -82,3 +82,4 @@ class CRUDableEntity:
             raise HTTPException(status_code=404, detail={"message": "Объекта с таким id не существует"})
         await session.commit()
         return {"status": "success"}
+    
