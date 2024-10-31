@@ -55,6 +55,7 @@ class CRUDableEntity:
         row = result.mappings().fetchone()
         if row:
             return self.read_model(**row)
+        raise HTTPException(404, {"message": "Объекта с таким id не существует"})
     
     async def get_all(self, session: AsyncSession) -> List[BaseModel]:
         query = select(self.target_table)

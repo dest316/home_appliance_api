@@ -14,9 +14,6 @@ router = APIRouter(
     tags=["CRUD_trade"]
 )
 
-# Создание объекта Crudable для использования стандарной реализации CRUD-операций
-trade = CRUDableEntity(Trade, WriteTrade, trades)
-
 
 # Метод возвращает продажу из базы данных по id
 @router.get("/", response_model=Trade)
@@ -30,6 +27,7 @@ async def get_specific_trade(trade_id: int, session: AsyncSession = Depends(get_
         id_list = [rec["id_1"] for rec in row]
         print(row)
         return Trade(product_id_list=id_list, **row[0])
+    raise HTTPException(404, detail={"message": "Объекта с таким id не существует"})
 
 
 # Метод возвращает список всех продаж
@@ -83,7 +81,7 @@ async def add_trade(new_trade: WriteTrade, session: AsyncSession = Depends(get_a
 
 # Метод для обновления информации о продаже с указанным id
 @router.put("/")
-async def update_trade(new_trade: Trade, entity: CRUDableEntity = Depends(lambda: trade), session: AsyncSession = Depends(get_async_session)):
+async def update_trade(new_trade: Trade, session: AsyncSession = Depends(get_async_session)):
     async with session.begin():
         stmt = update(trades).where(trades.c.id == new_trade.id)\
         .values(**new_trade.model_dump(include={"store_id", "date", "id"}, exclude_unset=True))
@@ -98,7 +96,7 @@ async def update_trade(new_trade: Trade, entity: CRUDableEntity = Depends(lambda
 
 # Метод для удаления продажи из базы данных по id
 @router.delete("/")
-async def delete_trade(trade_id: int, entity: CRUDableEntity = Depends(lambda: trade), session: AsyncSession = Depends(get_async_session)):
+async def delete_trade(trade_id: int, session: AsyncSession = Depends(get_async_session)):
     async with session.begin():
         stmt = delete(trades_products).where(trades_products.c.trade_id == trade_id)
         result = await session.execute(stmt)

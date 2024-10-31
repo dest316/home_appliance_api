@@ -5,8 +5,8 @@ from api.controllers.crud_product import router as crud_product_router
 from api.controllers.crud_store import router as crud_store_router
 from api.controllers.crud_trade import router as crud_trade_router
 from api.controllers.specific_trade import router as spec_trade_router
-from error_handlers import FKVError_handler
-from sqlalchemy.exc import IntegrityError
+from error_handlers import FKVError_handler, DBApiError_handler
+from sqlalchemy.exc import IntegrityError, DBAPIError
 
 
 # Точка входа в API
@@ -25,6 +25,7 @@ app.include_router(spec_trade_router)
 
 # Подключение обработчиков ошибок
 app.add_exception_handler(IntegrityError, FKVError_handler)
+app.add_exception_handler(DBAPIError, DBApiError_handler)
 
 # Главная страница приложения
 @app.get('/')

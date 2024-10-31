@@ -1,5 +1,5 @@
 from fastapi import Request, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 
 
 async def FKVError_handler(request: Request, exc: IntegrityError):
@@ -31,5 +31,14 @@ async def FKVError_handler(request: Request, exc: IntegrityError):
         raise HTTPException(status_code=400, detail="Попытка удаления объекта, на который есть ссылки в базе данных")
     elif 'foreign key constraint' in error_message or "ограничение внешнего ключа" in error_message:
         raise HTTPException(status_code=400, detail="Внешний ключ ссылается на несуществующий объект.")
+    else:
+        raise HTTPException(status_code=500, detail=f"Что-то пошло не так, текст ошибки: {error_message}")
+    
+
+async def DBApiError_handler(request: Request, exc: DBAPIError):
+    error_message = str(exc.orig).lower()
+    if "can't subtract offset-naive and offset-aware datetimes" in error_message:
+        raise HTTPException(400, detail={"message": "Дата отправлена в неправильном формате. Рекомендуется использовать дату следующего\
+ формата: YYYY-MM-ddТhh:mm:ss.f"})
     else:
         raise HTTPException(status_code=500, detail=f"Что-то пошло не так, текст ошибки: {error_message}")
