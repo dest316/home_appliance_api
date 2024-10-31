@@ -30,5 +30,5 @@ app.add_exception_handler(DBAPIError, DBApiError_handler)
 # Главная страница приложения
 @app.get('/')
 def index():
-    return Response("Hello world")
+    return Response("Для проверки api можете перейти по адресу /docs")
 
